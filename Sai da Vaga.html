@@ -1,0 +1,592 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Sai da Vaga</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;600&display=swap">
+<style>
+  /* Tema único e escuro de propósito: é um estacionamento de asfalto à noite */
+  :root {
+    color-scheme: dark;
+    --asfalto: #2a2c30;
+    --rua: #1b1d20;
+    --fundo: #141517;
+    --faixa: #f2c230;
+    --tinta: #e9e6dc;
+    --texto: #f3f1ea;
+    --apagado: #9b9da4;
+    --placa: #1f5fbf;
+    --erro: #e5484d;
+    --cell: 52px;
+  }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--fundo);
+    color: var(--texto);
+    font: 15px/1.45 "Barlow", system-ui, sans-serif;
+    padding-inline: 16px;
+    display: flex;
+    justify-content: center;
+  }
+  .app {
+    width: 100%;
+    max-width: 600px;
+    padding-block: 18px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* ---------- Cabeçalho ---------- */
+  header { display: flex; align-items: center; gap: 12px; }
+  .placa {
+    width: 44px; height: 44px; flex: none;
+    background: var(--placa);
+    border: 3px solid #fff;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    font: 26px/1 "Bungee", Impact, sans-serif;
+    color: #fff;
+    box-shadow: 0 0 0 2px var(--placa);
+  }
+  h1 {
+    margin: 0;
+    font: 26px/1 "Bungee", Impact, sans-serif;
+    letter-spacing: .02em;
+    text-wrap: balance;
+  }
+  .sub { margin: 2px 0 0; color: var(--apagado); font-size: 13px; }
+
+  /* ---------- Placar ---------- */
+  .painel {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr 1fr;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .fase {
+    display: flex; align-items: center; gap: 4px;
+    background: var(--rua);
+    border-radius: 8px;
+    padding: 4px;
+  }
+  .fase button {
+    width: 30px; height: 100%; min-height: 36px;
+    border: 0; border-radius: 6px;
+    background: transparent; color: var(--texto);
+    font-size: 16px; cursor: pointer;
+  }
+  .fase button:disabled { opacity: .25; cursor: default; }
+  .fase button:not(:disabled):hover { background: #2c2f34; }
+  .stat {
+    background: var(--rua);
+    border-radius: 8px;
+    padding: 6px 10px;
+    display: flex; flex-direction: column; justify-content: center;
+    min-width: 0;
+  }
+  .rotulo {
+    font: 700 11px/1.1 "Barlow Condensed", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--apagado);
+  }
+  .valor {
+    font: 22px/1.1 "Bungee", Impact, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .fase .stat { background: none; padding: 2px 4px; text-align: center; }
+  #batidas.ruim { color: var(--erro); }
+
+  /* ---------- Estacionamento ---------- */
+  .palco { display: flex; justify-content: center; }
+  .rua {
+    position: relative;
+    padding: calc(var(--cell) * .7);
+    background:
+      repeating-linear-gradient(90deg, transparent 0 18px, rgba(233,230,220,.05) 18px 20px),
+      var(--rua);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 2px #0e0f11;
+  }
+  .lote {
+    position: relative;
+    width: calc(var(--cell) * var(--cols));
+    height: calc(var(--cell) * var(--rows));
+    background-color: var(--asfalto);
+    background-image:
+      linear-gradient(to right, rgba(233,230,220,.13) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(233,230,220,.13) 1px, transparent 1px),
+      radial-gradient(rgba(255,255,255,.035) 1px, transparent 1.5px);
+    background-size: var(--cell) var(--cell), var(--cell) var(--cell), 7px 7px;
+    outline: 3px dashed var(--faixa);
+    outline-offset: 2px;
+  }
+  .carro {
+    position: absolute;
+    padding: 0; border: 0; margin: 0;
+    background: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .carro svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .carro:focus-visible { outline: 3px solid var(--faixa); outline-offset: -3px; border-radius: 10px; }
+  .carro:hover svg { filter: brightness(1.12); }
+  .carro.dica svg { animation: pisca .6s ease-in-out 4; }
+  .carro.bateu svg { animation: treme .32s ease-in-out; }
+  @keyframes pisca { 50% { filter: brightness(1.7) drop-shadow(0 0 8px var(--faixa)); } }
+  @keyframes treme {
+    20% { transform: translate(2px, -1px) rotate(1.5deg); }
+    45% { transform: translate(-2px, 1px) rotate(-1.5deg); }
+    70% { transform: translate(1px, 0) rotate(.8deg); }
+  }
+
+  /* ---------- Vitória ---------- */
+  .vitoria {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    background: rgba(20,21,23,.78);
+    backdrop-filter: blur(2px);
+    text-align: center;
+    padding: 16px;
+  }
+  .vitoria h2 { margin: 0; font: 24px/1.1 "Bungee", Impact, sans-serif; color: var(--faixa); text-wrap: balance; }
+  .estrelas { font-size: 38px; letter-spacing: 6px; margin: 8px 0 4px; }
+  .estrelas .on { color: var(--faixa); }
+  .estrelas .off { color: #3a3d43; }
+  .vitoria p { margin: 0 0 14px; color: var(--apagado); }
+
+  /* ---------- Botões ---------- */
+  .acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    flex: 1 1 140px;
+    min-height: 44px;
+    border-radius: 8px;
+    font: 700 16px/1 "Barlow Condensed", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    cursor: pointer;
+    border: 2px solid #3a3d43;
+    background: transparent;
+    color: var(--texto);
+  }
+  .btn:hover { border-color: var(--apagado); }
+  .btn.amarelo { background: var(--faixa); border-color: var(--faixa); color: #1b1d20; }
+  .btn.amarelo:hover { filter: brightness(1.08); }
+  .btn:focus-visible, .fase button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+  .regras {
+    margin: 0;
+    color: var(--apagado);
+    font-size: 14px;
+    max-width: 62ch;
+  }
+  .regras b { color: var(--texto); font-weight: 600; }
+
+  @media (max-width: 420px) {
+    h1 { font-size: 21px; }
+    .valor { font-size: 18px; }
+    .painel { gap: 6px; }
+    .stat { padding: 6px 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .carro.dica svg, .carro.bateu svg { animation-duration: .01s; }
+  }
+</style>
+
+<div class="app">
+  <header>
+    <div class="placa" aria-hidden="true">E</div>
+    <div>
+      <h1>Sai da Vaga</h1>
+      <p class="sub">Tire todos os carros do estacionamento</p>
+    </div>
+  </header>
+
+  <div class="painel">
+    <div class="fase">
+      <button id="anterior" aria-label="Fase anterior">◀</button>
+      <div class="stat"><span class="rotulo">Fase</span><span class="valor" id="nivel">1</span></div>
+      <button id="proxima" aria-label="Próxima fase">▶</button>
+    </div>
+    <div class="stat"><span class="rotulo">Carros</span><span class="valor" id="restantes">0</span></div>
+    <div class="stat"><span class="rotulo">Batidas</span><span class="valor" id="batidas">0</span></div>
+    <div class="stat"><span class="rotulo">Toques</span><span class="valor" id="toques">0</span></div>
+  </div>
+
+  <div class="palco">
+    <div class="rua" id="rua">
+      <div class="lote" id="lote"></div>
+    </div>
+  </div>
+
+  <div class="acoes">
+    <button class="btn amarelo" id="btnDica">Dica</button>
+    <button class="btn" id="btnReiniciar">Reiniciar fase</button>
+  </div>
+
+  <p class="regras">
+    <b>Toque num carro</b> e ele anda na direção da seta. Se o caminho até a borda estiver livre, ele sai do estacionamento. Se tiver outro carro na frente, ele <b>bate e volta</b>. Descubra a ordem certa e limpe o pátio sem nenhuma batida para ganhar 3 estrelas.
+  </p>
+</div>
+
+<script>
+/* =========================================================
+   SAI DA VAGA — jogo de desbloquear estacionamento
+   Tudo em HTML + CSS + JavaScript puro, sem bibliotecas.
+   ========================================================= */
+
+const CORES = ["#e0473a", "#3a7bd5", "#2bb3a3", "#f08a24", "#8a5cd6", "#9bc53d", "#e85d9c", "#f4c20d", "#5bc0eb"];
+const MARGEM_RUA = 0.7; // largura da rua em volta, em "casas"
+
+/* ---------- Números aleatórios com semente ----------
+   Assim a fase 5 é sempre a mesma fase 5 para todo mundo. */
+function criarAleatorio(semente) {
+  return function () {
+    semente |= 0; semente = (semente + 0x6D2B79F5) | 0;
+    let t = Math.imul(semente ^ (semente >>> 15), 1 | semente);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* ---------- Geometria dos carros ----------
+   Um carro tem: linha (r), coluna (c), orientação ("h" ou "v"),
+   comprimento (len = 2 carro, 3 caminhão) e direção (d = +1 ou -1). */
+function casasDoCarro(carro) {
+  const casas = [];
+  for (let i = 0; i < carro.len; i++) {
+    casas.push(carro.o === "h" ? [carro.r, carro.c + i] : [carro.r + i, carro.c]);
+  }
+  return casas;
+}
+
+// Casas entre a frente do carro e a borda, em ordem
+function caminhoDoCarro(carro, linhas, colunas) {
+  const caminho = [];
+  if (carro.o === "h") {
+    if (carro.d > 0) for (let c = carro.c + carro.len; c < colunas; c++) caminho.push([carro.r, c]);
+    else for (let c = carro.c - 1; c >= 0; c--) caminho.push([carro.r, c]);
+  } else {
+    if (carro.d > 0) for (let r = carro.r + carro.len; r < linhas; r++) caminho.push([r, carro.c]);
+    else for (let r = carro.r - 1; r >= 0; r--) caminho.push([r, carro.c]);
+  }
+  return caminho;
+}
+
+// Grade com o id do carro que ocupa cada casa (-1 = vazio)
+function montarGrade(carros, linhas, colunas) {
+  const grade = Array.from({ length: linhas }, () => Array(colunas).fill(-1));
+  for (const carro of carros) {
+    if (carro.saiu) continue;
+    for (const [r, c] of casasDoCarro(carro)) grade[r][c] = carro.id;
+  }
+  return grade;
+}
+
+/* ---------- Resolvedor ----------
+   Tirar um carro nunca atrapalha os outros (só libera espaço).
+   Então basta ir tirando todo carro que estiver livre: se no fim
+   sobrar alguém travado, a fase não tem solução.
+   "rodadas" mede a profundidade: quantas camadas de bloqueio existem. */
+function resolver(carros, linhas, colunas) {
+  let vivos = carros.filter(c => !c.saiu);
+  let rodadas = 0;
+  while (vivos.length) {
+    const grade = montarGrade(vivos, linhas, colunas);
+    const livres = vivos.filter(car =>
+      caminhoDoCarro(car, linhas, colunas).every(([r, c]) => grade[r][c] === -1));
+    if (!livres.length) return { ok: false, rodadas, travados: vivos };
+    const ids = new Set(livres.map(c => c.id));
+    vivos = vivos.filter(c => !ids.has(c.id));
+    rodadas++;
+  }
+  return { ok: true, rodadas, travados: [] };
+}
+
+/* ---------- Gerador de fases ----------
+   1. Espalha carros aleatórios até encher o pátio.
+   2. Enquanto a fase não tiver solução, vira um carro travado de ré
+      (ou tira ele, se já foi virado).
+   3. Repete várias vezes e fica com a fase mais "profunda". */
+function gerarFase(nivel) {
+  const aleatorio = criarAleatorio(nivel * 7919 + 13);
+  const tamanho = Math.min(5 + Math.floor((nivel - 1) / 2), 9);
+  const linhas = tamanho, colunas = tamanho;
+  const ocupacaoAlvo = Math.min(0.55 + nivel * 0.03, 0.88);
+  const profundidadeMinima = Math.min(2 + Math.floor(nivel / 2), 9);
+  const chanceCaminhao = nivel < 3 ? 0.12 : 0.26;
+
+  let melhor = null;
+  for (let tentativa = 0; tentativa < 60; tentativa++) {
+    const ocupado = Array.from({ length: linhas }, () => Array(colunas).fill(false));
+    let carros = [];
+    let preenchido = 0, id = 0;
+
+    for (let t = 0; t < 800 && preenchido / (linhas * colunas) < ocupacaoAlvo; t++) {
+      const o = aleatorio() < 0.5 ? "h" : "v";
+      const len = aleatorio() < chanceCaminhao ? 3 : 2;
+      const r = Math.floor(aleatorio() * (o === "v" ? linhas - len + 1 : linhas));
+      const c = Math.floor(aleatorio() * (o === "h" ? colunas - len + 1 : colunas));
+      const carro = { id, r, c, o, len, d: aleatorio() < 0.5 ? 1 : -1 };
+      const casas = casasDoCarro(carro);
+      if (casas.some(([a, b]) => ocupado[a][b])) continue;
+      casas.forEach(([a, b]) => (ocupado[a][b] = true));
+      preenchido += len; id++;
+      carros.push(carro);
+    }
+
+    // Conserta até ter solução
+    const virados = new Set();
+    for (let k = 0; k < 300; k++) {
+      const res = resolver(carros, linhas, colunas);
+      if (res.ok) break;
+      const vitima = res.travados[Math.floor(aleatorio() * res.travados.length)];
+      if (!virados.has(vitima.id)) { vitima.d *= -1; virados.add(vitima.id); }
+      else carros = carros.filter(c => c.id !== vitima.id);
+    }
+
+    const res = resolver(carros, linhas, colunas);
+    if (!res.ok) continue;
+    if (!melhor || res.rodadas > melhor.profundidade) {
+      melhor = { carros, linhas, colunas, profundidade: res.rodadas };
+    }
+    if (res.rodadas >= profundidadeMinima) break;
+  }
+
+  // Pinta os carros
+  melhor.carros.forEach(c => (c.cor = CORES[Math.floor(aleatorio() * CORES.length)]));
+  return melhor;
+}
+
+/* ---------- Desenho do carro (SVG) ----------
+   Desenhamos sempre o carro "deitado, apontando para a direita"
+   e depois giramos com uma matriz para a direção certa. */
+function desenharCarro(carro) {
+  const L = carro.len;
+  const horizontal = carro.o === "h";
+  const largura = horizontal ? L : 1, altura = horizontal ? 1 : L;
+  let giro;
+  if (horizontal) giro = carro.d > 0 ? "matrix(1,0,0,1,0,0)" : `matrix(-1,0,0,-1,${L},1)`;
+  else giro = carro.d > 0 ? "matrix(0,1,-1,0,1,0)" : `matrix(0,-1,1,0,0,${L})`;
+
+  const cor = carro.cor;
+  const vidro = "#17202b";
+  let s = "";
+  // sombra no chão
+  s += `<rect x="0.12" y="0.18" width="${L - 0.2}" height="0.72" rx="0.2" fill="rgba(0,0,0,.4)"/>`;
+
+  if (L === 2) {
+    s += `<rect x="0.08" y="0.12" width="1.84" height="0.76" rx="0.22" fill="${cor}"/>`;
+    s += `<rect x="0.08" y="0.12" width="1.84" height="0.2" rx="0.1" fill="#fff" opacity=".12"/>`;
+    s += `<path d="M0.34 0.24 Q0.28 0.5 0.34 0.76 H0.5 V0.24 Z" fill="${vidro}"/>`;          // vidro traseiro
+    s += `<rect x="0.56" y="0.25" width="0.72" height="0.5" rx="0.08" fill="#000" opacity=".12"/>`; // teto
+    s += `<path d="M1.32 0.22 H1.5 Q1.64 0.5 1.5 0.78 H1.32 Z" fill="${vidro}"/>`;            // para-brisa
+    s += `<circle cx="1.84" cy="0.25" r="0.06" fill="#fff6c4"/><circle cx="1.84" cy="0.75" r="0.06" fill="#fff6c4"/>`;
+    s += `<rect x="0.1" y="0.2" width="0.06" height="0.14" rx="0.02" fill="#b3121a"/><rect x="0.1" y="0.66" width="0.06" height="0.14" rx="0.02" fill="#b3121a"/>`;
+    // seta de direção no teto
+    s += `<path d="M0.8 0.36 L0.98 0.5 L0.8 0.64" stroke="#fff" stroke-width="0.09" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  } else {
+    // caminhão: baú atrás, cabine na frente
+    s += `<rect x="0.06" y="0.08" width="1.98" height="0.84" rx="0.08" fill="#dcd8cc"/>`;
+    s += `<rect x="0.06" y="0.08" width="1.98" height="0.84" rx="0.08" fill="${cor}" opacity=".28"/>`;
+    s += `<path d="M0.2 0.5 H1.9" stroke="#000" stroke-opacity=".12" stroke-width="0.03"/>`;
+    s += `<rect x="2.08" y="0.14" width="0.84" height="0.72" rx="0.18" fill="${cor}"/>`;
+    s += `<path d="M2.5 0.2 H2.66 Q2.8 0.5 2.66 0.8 H2.5 Z" fill="${vidro}"/>`;
+    s += `<circle cx="2.86" cy="0.26" r="0.06" fill="#fff6c4"/><circle cx="2.86" cy="0.74" r="0.06" fill="#fff6c4"/>`;
+    // setas no baú
+    for (const x of [0.62, 1.2]) {
+      s += `<path d="M${x} 0.34 L${x + 0.2} 0.5 L${x} 0.66" stroke="${cor}" stroke-width="0.1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+  }
+  return `<svg viewBox="0 0 ${largura} ${altura}" aria-hidden="true"><g transform="${giro}">${s}</g></svg>`;
+}
+
+/* ---------- Estado do jogo ---------- */
+const $ = id => document.getElementById(id);
+const lote = $("lote"), rua = $("rua");
+let jogo = null;
+let tamanhoCasa = 52;
+
+function lerProgresso() {
+  try { return JSON.parse(localStorage.getItem("saiDaVaga")) || { nivel: 1, maximo: 1 }; }
+  catch { return { nivel: 1, maximo: 1 }; }
+}
+function salvarProgresso(p) {
+  try { localStorage.setItem("saiDaVaga", JSON.stringify(p)); } catch {}
+}
+let progresso = lerProgresso();
+
+function iniciarFase(nivel) {
+  const fase = gerarFase(nivel);
+  jogo = {
+    nivel,
+    linhas: fase.linhas,
+    colunas: fase.colunas,
+    carros: fase.carros.map(c => ({ ...c, saiu: false })),
+    batidas: 0,
+    toques: 0,
+    terminou: false,
+  };
+  jogo.grade = montarGrade(jogo.carros, jogo.linhas, jogo.colunas);
+  progresso.nivel = nivel;
+  salvarProgresso(progresso);
+  ajustarTamanho();
+  desenharTudo();
+}
+
+function ajustarTamanho() {
+  if (!jogo) return;
+  const larguraDisponivel = document.querySelector(".app").clientWidth;
+  const alturaDisponivel = Math.max(window.innerHeight - 300, 260);
+  const porLargura = larguraDisponivel / (jogo.colunas + MARGEM_RUA * 2);
+  const porAltura = alturaDisponivel / (jogo.linhas + MARGEM_RUA * 2);
+  tamanhoCasa = Math.max(28, Math.min(66, Math.floor(Math.min(porLargura, porAltura))));
+  const raiz = document.documentElement.style;
+  raiz.setProperty("--cell", tamanhoCasa + "px");
+  lote.style.setProperty("--cols", jogo.colunas);
+  lote.style.setProperty("--rows", jogo.linhas);
+}
+
+const NOMES_DIRECAO = { "h1": "direita", "h-1": "esquerda", "v1": "baixo", "v-1": "cima" };
+
+function desenharTudo() {
+  lote.innerHTML = "";
+  for (const carro of jogo.carros) {
+    if (carro.saiu) continue;
+    const el = document.createElement("button");
+    el.className = "carro";
+    el.id = "carro-" + carro.id;
+    el.style.left = `calc(var(--cell) * ${carro.c})`;
+    el.style.top = `calc(var(--cell) * ${carro.r})`;
+    el.style.width = `calc(var(--cell) * ${carro.o === "h" ? carro.len : 1})`;
+    el.style.height = `calc(var(--cell) * ${carro.o === "v" ? carro.len : 1})`;
+    el.setAttribute("aria-label", `${carro.len === 3 ? "Caminhão" : "Carro"} indo para ${NOMES_DIRECAO[carro.o + carro.d]}`);
+    el.innerHTML = desenharCarro(carro);
+    el.addEventListener("click", () => tocarCarro(carro, el));
+    carro.el = el;
+    lote.appendChild(el);
+  }
+  atualizarPainel();
+}
+
+function atualizarPainel() {
+  $("nivel").textContent = jogo.nivel;
+  $("restantes").textContent = jogo.carros.filter(c => !c.saiu).length;
+  $("batidas").textContent = jogo.batidas;
+  $("batidas").classList.toggle("ruim", jogo.batidas > 0);
+  $("toques").textContent = jogo.toques;
+  $("anterior").disabled = jogo.nivel <= 1;
+  $("proxima").disabled = jogo.nivel >= progresso.maximo;
+}
+
+/* ---------- A jogada ----------
+   Olha o caminho do carro casa por casa. Se achar alguém, bate.
+   Se chegar na borda, sai. */
+const semAnimacao = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function tocarCarro(carro, el) {
+  if (carro.saiu || carro.animando || jogo.terminou) return;
+  jogo.toques++;
+  const caminho = caminhoDoCarro(carro, jogo.linhas, jogo.colunas);
+  let livres = 0, bloqueador = -1;
+  for (const [r, c] of caminho) {
+    if (jogo.grade[r][c] !== -1) { bloqueador = jogo.grade[r][c]; break; }
+    livres++;
+  }
+  const dx = carro.o === "h" ? carro.d : 0;
+  const dy = carro.o === "v" ? carro.d : 0;
+
+  if (bloqueador === -1) {
+    // Caminho livre: tira da grade já e anima a saída
+    carro.saiu = true;
+    for (const [r, c] of casasDoCarro(carro)) jogo.grade[r][c] = -1;
+    const distancia = (livres + carro.len + MARGEM_RUA + 0.3) * tamanhoCasa;
+    el.style.zIndex = 5;
+    el.disabled = true;
+    const anim = el.animate(
+      [{ transform: "translate(0,0)" }, { transform: `translate(${dx * distancia}px, ${dy * distancia}px)` }],
+      { duration: semAnimacao ? 1 : 180 + livres * 55, easing: "cubic-bezier(.5,0,.9,.6)", fill: "forwards" }
+    );
+    anim.onfinish = () => {
+      el.remove();
+      if (jogo.carros.every(c => c.saiu) && !jogo.terminou) vencer();
+    };
+  } else {
+    // Bateu: vai até o carro da frente e volta
+    jogo.batidas++;
+    carro.animando = true;
+    const avanco = (livres + 0.14) * tamanhoCasa;
+    const ida = semAnimacao ? 1 : 110 + livres * 60;
+    const anim = el.animate(
+      [
+        { transform: "translate(0,0)", easing: "ease-in" },
+        { transform: `translate(${dx * avanco}px, ${dy * avanco}px)`, offset: 0.55, easing: "ease-out" },
+        { transform: "translate(0,0)" },
+      ],
+      { duration: ida * 2 + 120 }
+    );
+    setTimeout(() => {
+      const outro = jogo.carros.find(c => c.id === bloqueador);
+      [outro?.el, el].forEach(e => {
+        if (!e) return;
+        e.classList.remove("bateu"); void e.offsetWidth; e.classList.add("bateu");
+      });
+    }, ida);
+    anim.onfinish = () => { carro.animando = false; };
+  }
+  atualizarPainel();
+}
+
+function vencer() {
+  jogo.terminou = true;
+  const estrelas = jogo.batidas === 0 ? 3 : jogo.batidas <= 2 ? 2 : 1;
+  progresso.maximo = Math.max(progresso.maximo, jogo.nivel + 1);
+  salvarProgresso(progresso);
+  atualizarPainel();
+
+  const frase = estrelas === 3 ? "Sem nenhum arranhão."
+    : `${jogo.batidas} ${jogo.batidas === 1 ? "batida" : "batidas"}. Dá para fazer sem nenhuma.`;
+  const tela = document.createElement("div");
+  tela.className = "vitoria";
+  tela.innerHTML = `
+    <div>
+      <h2>Pátio liberado!</h2>
+      <div class="estrelas" aria-label="${estrelas} de 3 estrelas">
+        ${[1, 2, 3].map(i => `<span class="${i <= estrelas ? "on" : "off"}">★</span>`).join("")}
+      </div>
+      <p>${frase}</p>
+      <div class="acoes">
+        <button class="btn" id="btnDeNovo">Jogar de novo</button>
+        <button class="btn amarelo" id="btnSeguir">Próxima fase</button>
+      </div>
+    </div>`;
+  rua.appendChild(tela);
+  $("btnDeNovo").onclick = () => { tela.remove(); iniciarFase(jogo.nivel); };
+  $("btnSeguir").onclick = () => { tela.remove(); iniciarFase(jogo.nivel + 1); };
+  $("btnSeguir").focus();
+}
+
+/* ---------- Dica: mostra um carro que pode sair ---------- */
+function darDica() {
+  if (jogo.terminou) return;
+  const livre = jogo.carros.find(c => !c.saiu && !c.animando &&
+    caminhoDoCarro(c, jogo.linhas, jogo.colunas).every(([r, col]) => jogo.grade[r][col] === -1));
+  if (!livre) return;
+  livre.el.classList.remove("dica"); void livre.el.offsetWidth;
+  livre.el.classList.add("dica");
+}
+
+function limparVitoria() { rua.querySelector(".vitoria")?.remove(); }
+
+$("btnDica").onclick = darDica;
+$("btnReiniciar").onclick = () => { limparVitoria(); iniciarFase(jogo.nivel); };
+$("anterior").onclick = () => { limparVitoria(); iniciarFase(Math.max(1, jogo.nivel - 1)); };
+$("proxima").onclick = () => { limparVitoria(); iniciarFase(Math.min(progresso.maximo, jogo.nivel + 1)); };
+window.addEventListener("resize", ajustarTamanho);
+
+iniciarFase(Math.min(progresso.nivel || 1, progresso.maximo || 1));
+</script>
+
+</body></html>
